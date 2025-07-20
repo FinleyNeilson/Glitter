@@ -14,14 +14,14 @@ int main(int argc, char *argv[]) {
 
   // Load GLFW and Create a Window
   glfwInit();
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+  // OpenGL version and core profile
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-  glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-  glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
-  auto mWindow = glfwCreateWindow(mWidth, mHeight, "PENIS", nullptr, nullptr);
-
+  // Set the window
+  auto mWindow =
+      glfwCreateWindow(mWidth, mHeight, "Hello World!", nullptr, nullptr);
   // Check for Valid Context
   if (mWindow == nullptr) {
     fprintf(stderr, "Failed to Create OpenGL Context");
@@ -39,13 +39,16 @@ int main(int argc, char *argv[]) {
       0.5f,  0.5f,  0.0f, // top right
       0.5f,  -0.5f, 0.0f, // bottom right
       -0.5f, -0.5f, 0.0f, // bottom left
-      -0.5f, 0.5f,  0.0f  // top left
+      -0.5f, 0.5f,  0.0f, // top left
+      -0.9f, 0.9f,  0.0f  // top left
   };
+
   unsigned int indices[] = {
-      // note that we start from 0!
       0, 1, 2, // first triangle
 
-      1, 2, 3 // second triangle
+      3, 2, 1, // second triangle
+
+      0, 2, 4 // third triangle
   };
 
   const char *vertexShaderSource =
@@ -67,7 +70,7 @@ int main(int argc, char *argv[]) {
 
       "void main()\n"
       "{\n"
-      "    FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
+      "    FragColor = vec4(1.0f, 0.8f, 0.2f, 1.0f);\n"
       "}\n";
 
   unsigned int fragmentShader;
@@ -106,6 +109,8 @@ int main(int argc, char *argv[]) {
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
   glEnableVertexAttribArray(0);
 
+  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
   // Rendering Loop
   while (glfwWindowShouldClose(mWindow) == false) {
     if (glfwGetKey(mWindow, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -117,7 +122,7 @@ int main(int argc, char *argv[]) {
 
     glUseProgram(shaderProgram);
     glBindVertexArray(VAO);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_TRIANGLES, 9, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 
     // Flip Buffers and Draw
