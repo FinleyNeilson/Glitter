@@ -1,4 +1,5 @@
 // Local Headers
+#include "Shader.h"
 #include "glitter.hpp"
 
 // System Headers
@@ -9,80 +10,45 @@
 #include <cstdio>
 #include <cstdlib>
 
-int main(int argc, char *argv[]) {
-  (void)argc, (void)argv; // Currently unused
+void framebuffer_size_callback(GLFWwindow *window, int width, int height);
+void processInput(GLFWwindow *window);
 
-  // Load GLFW and Create a Window
+int main(int argc, char *argv[]) {
+  (void)argc, (void)argv;
+
   glfwInit();
-  // OpenGL version and core profile
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-  // Set the window
-  auto mWindow =
+  GLFWwindow *mWindow =
       glfwCreateWindow(mWidth, mHeight, "Hello World!", nullptr, nullptr);
-  // Check for Valid Context
+
   if (mWindow == nullptr) {
     fprintf(stderr, "Failed to Create OpenGL Context");
     return EXIT_FAILURE;
   }
 
-  // Create Context and Load OpenGL Functions
   glfwMakeContextCurrent(mWindow);
-  gladLoadGL();
-  fprintf(stderr, "OpenGL %s\n", glGetString(GL_VERSION));
+  glfwSetFramebufferSizeCallback(mWindow, framebuffer_size_callback);
+
+  if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+    fprintf(stderr, "Failed to initialize GLAD\n");
+    return -1;
+  }
 
   // ..:: Initialization code :: ..
 
-  float vertices[] = {
-      0.5f,  0.5f,  0.0f, // top right
-      0.5f,  -0.5f, 0.0f, // bottom right
-      -0.5f, -0.5f, 0.0f, // bottom left
-      -0.5f, 0.5f,  0.0f, // top left
-      -0.9f, 0.9f,  0.0f  // top left
-  };
+  Shader shader("../Glitter/Shaders/vertexShader.vert",
+                "../Glitter/Shaders/fragmentShader.frag");
+
+  float vertices[] = {// positions         // colors
+                      0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, -0.5f, -0.5f, 0.0f,
+                      0.0f, 1.0f,  0.0f, 0.0f, 0.5f, 0.0f, 0.0f,  0.0f,  1.0f};
 
   unsigned int indices[] = {
-      0, 1, 2, // first triangle
-
-      3, 2, 1, // second triangle
-
-      0, 2, 4 // third triangle
+      0, 1, 2,  // first triangle
   };
-
-  const char *vertexShaderSource =
-      "#version 330 core\n"
-      "layout (location = 0) in vec3 aPos;\n"
-      "void main()\n"
-      "{\n"
-      "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-      "}\0";
-
-  unsigned int vertexShader;
-  vertexShader = glCreateShader(GL_VERTEX_SHADER);
-  glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-  glCompileShader(vertexShader);
-
-  const char *fragmentShaderSource =
-      "#version 330 core\n"
-      "out vec4 FragColor;\n"
-
-      "void main()\n"
-      "{\n"
-      "    FragColor = vec4(1.0f, 0.8f, 0.2f, 1.0f);\n"
-      "}\n";
-
-  unsigned int fragmentShader;
-  fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-  glCompileShader(fragmentShader);
-
-  unsigned int shaderProgram;
-  shaderProgram = glCreateProgram();
-  glAttachShader(shaderProgram, vertexShader);
-  glAttachShader(shaderProgram, fragmentShader);
-  glLinkProgram(shaderProgram);
 
   unsigned int VBO;
   glGenBuffers(1, &VBO);
@@ -93,44 +59,69 @@ int main(int argc, char *argv[]) {
   unsigned int EBO;
   glGenBuffers(1, &EBO);
 
-  // 1. bind Vertex Array Object
+  // bind the Vertex Array Object first, then bind and set vertex buffer(s),
+  // and then configure vertex attributes(s).
   glBindVertexArray(VAO);
 
-  // 2. copy our vertices array in a vertex buffer for OpenGL to use
   glBindBuffer(GL_ARRAY_BUFFER, VBO);
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-  // 3. copy our index array in a element buffer for OpenGL to use
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
                GL_STATIC_DRAW);
 
-  // 4. then set the vertex attributes pointers
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)0);
   glEnableVertexAttribArray(0);
 
-  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float),
+                        (void *)(3 * sizeof(float)));
+  glEnableVertexAttribArray(1);
 
-  // Rendering Loop
+  // ..:: Rendering Loop :: ..
   while (glfwWindowShouldClose(mWindow) == false) {
-    if (glfwGetKey(mWindow, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-      glfwSetWindowShouldClose(mWindow, true);
+    processInput(mWindow);
+
+    float time = glfwGetTime();
+
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::rotate(model, time, glm::vec3(0.0f, 1.0f, 0.0f));
+
+    float greenValue = (sin(time) / 2.0f) + 0.5f;
+
+    shader.use();
+    shader.setMat4("uModel", model);
+    shader.setVec4("ourColor", glm::vec4(0.0f, greenValue, 0.0f, 1.0f));
 
     // Background Fill Color
     glClearColor(0.25f, 0.25f, 0.75f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    glUseProgram(shaderProgram);
     glBindVertexArray(VAO);
-    glDrawElements(GL_TRIANGLES, 9, GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 
     // Flip Buffers and Draw
     glfwSwapBuffers(mWindow);
     glfwPollEvents();
   }
-  glDeleteShader(vertexShader);
-  glDeleteShader(fragmentShader);
   glfwTerminate();
   return EXIT_SUCCESS;
+}
+
+// process all input: query GLFW whether relevant keys are pressed/released this
+// frame and react accordingly
+// ---------------------------------------------------------------------------------------------------------
+void processInput(GLFWwindow *window) {
+  if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+    glfwSetWindowShouldClose(window, true);
+}
+
+// glfw: whenever the window size changed (by OS or user resize) this callback
+// function executes
+// ---------------------------------------------------------------------------------------------
+
+void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
+  // make sure the viewport matches the new window dimensions; note that width
+  // and height will be significantly larger than specified on retina displays.
+  glViewport(0, 0, width, height);
 }
