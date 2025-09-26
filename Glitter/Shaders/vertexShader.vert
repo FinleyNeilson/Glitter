@@ -1,18 +1,19 @@
 #version 330 core
-// This is to do with how we load the vertices
+// This is glVertexAttribPointer
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aColor;
 layout (location = 2) in vec2 aTexCoord;
 
-uniform mat4 uModel;
-uniform mat4 transform;
+uniform mat4 model;
+uniform mat4 view;
+uniform mat4 projection;
 
-out vec3 ourVertexColor;
-out vec2 TexCoord;
+out vec3 vertexColor;
+out vec2 texCord;
 
 void main()
 {
-  gl_Position = transform * uModel * vec4(aPos.x, aPos.y, aPos.z, 1.0);
-  ourVertexColor = aColor;
-  TexCoord = aTexCoord;
+  gl_Position = projection * view * model * vec4(aPos, 1.0);
+  vertexColor = aColor;
+  texCord = aTexCoord;
 }

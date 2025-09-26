@@ -1,19 +1,18 @@
 #version 330 core
 layout(location = 0) out vec4 FragColor;
 
-in vec3 ourVertexColor;
-in vec2 TexCoord;
+in vec3 vertexColor;
+in vec2 texCord;
 
 uniform sampler2D texture1;
 uniform sampler2D texture2;
-uniform vec4 ourColor;
+
+uniform vec4 uColor;
                                          
 void main()
 {
-  // Sample the texture
-  // vec4 texColor = texture(texture2, TexCoord);
-  vec4 texColor = mix(texture(texture1, TexCoord), texture(texture2, TexCoord), 0.5);
+  vec4 texColor = mix(texture(texture1, texCord), texture(texture2, texCord), 0.5);
 
-  // Modulate it by ourColor (convert to vec4 with alpha 1.0)
-  FragColor = texColor * ourColor * vec4(ourVertexColor, 1.0);
+  vec3 tint = mix(vertexColor, uColor.rgb, 0.5);
+  FragColor = vec4(texColor.rgb * tint, texColor.a);
 }

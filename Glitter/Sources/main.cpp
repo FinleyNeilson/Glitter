@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
 
   // Create the window
   GLFWwindow* mWindow =
-      glfwCreateWindow(mWidth, mHeight, "Hello World!", nullptr, nullptr);
+      glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Hello World!", nullptr, nullptr);
 
   // Throw error if failed to create window
   if (mWindow == nullptr) {
@@ -50,8 +50,8 @@ int main(int argc, char* argv[]) {
   // ..:: Initialization code ::..
 
   // Load my shaders
-  Shader shader("../Glitter/Shaders/vertexShader.vert",
-                "../Glitter/Shaders/fragmentShader.frag");
+  Shader mainShader("../Glitter/Shaders/vertexShader.vert",
+                    "../Glitter/Shaders/fragmentShader.frag");
 
   float vertices[] = {
       // positions        // colors         // texture coords
@@ -110,51 +110,44 @@ int main(int argc, char* argv[]) {
                         (void*)(6 * sizeof(float)));  // texCoords
   glEnableVertexAttribArray(2);
 
-  glm::mat4 transform = glm::mat4(1.0f);
-  transform = glm::translate(transform, glm::vec3(0.2f, 0.2f, 0.0f));
-  transform =
-      glm::rotate(transform, glm::radians(90.0f), glm::vec3(0.0, 0.0, 1.0));
-  transform = glm::scale(transform, glm::vec3(1.2, 1.2, 1.2));
-
   glm::mat4 model = glm::mat4(1.0f);
-  model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-  // model = glm::rotate(model, time, glm::vec3(0.0f, 1.0f, 0.0f));
-
   glm::mat4 view = glm::mat4(1.0f);
-  // note that we're translating the scene in the reverse direction of where
-  // we want to move
+  glm::mat4 projection = glm::mat4(1.0f);
 
-  shader.use();
-  shader.setMat4("transform", transform);
+  model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+  view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+  projection = glm::perspective(
+      glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+
+  mainShader.use();
+  mainShader.setMat4("model", model);
+  mainShader.setMat4("view", view);
+  mainShader.setMat4("projection", projection);
+  mainShader.setInt("texture1", 0);
+  mainShader.setInt("texture2", 1);
 
   // ..:: Rendering Loop ::..
   while (glfwWindowShouldClose(mWindow) == false) {
     processInput(mWindow);
 
+    // Changing green color
     float time = glfwGetTime();
-
-    glm::mat4 projection;
-    projection =
-        glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 100.0f);
-
-    view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
-
     float greenValue = (sin(time) / 2.0f) + 0.5f;
 
-    shader.use();
-    shader.setInt("texture1", 0);
-    shader.setInt("texture2", 1);
-    shader.setMat4("uModel", model);
-    shader.setVec4("ourColor", glm::vec4(0.0f, greenValue, 0.0f, 1.0f));
+    // rotateByTime = glm::rotate(model, time, glm::vec3(0.0f, 1.0f, 0.0f));
 
-    // Background Fill Color
-    glClearColor(0.25f, 0.25f, 0.75f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
+    // Send the green color to the fragment shader.
+    mainShader.use();
+    mainShader.setVec4("uColor", glm::vec4(0.0f, greenValue, 0.0f, 1.0f));
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture1);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, texture2);
+
+    // Background Fill Color
+    glClearColor(0.25f, 0.25f, 0.75f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
 
     glBindVertexArray(VAO);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
