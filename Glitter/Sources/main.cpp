@@ -7,30 +7,38 @@
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 // Standard Headers
 #include <cstdio>
 #include <cstdlib>
 
-void framebuffer_size_callback(GLFWwindow *window, int width, int height);
-void processInput(GLFWwindow *window);
-unsigned int loadTexture(const std::string &path);
+void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+void processInput(GLFWwindow* window);
+unsigned int loadTexture(const std::string& path);
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   (void)argc, (void)argv;
 
   glfwInit();
+  // Set opengl version
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-  GLFWwindow *mWindow =
+  // Create the window
+  GLFWwindow* mWindow =
       glfwCreateWindow(mWidth, mHeight, "Hello World!", nullptr, nullptr);
 
+  // Throw error if failed to create window
   if (mWindow == nullptr) {
     fprintf(stderr, "Failed to Create OpenGL Context");
     return EXIT_FAILURE;
   }
 
+  // This connects GLAD to opengl
   glfwMakeContextCurrent(mWindow);
   glfwSetFramebufferSizeCallback(mWindow, framebuffer_size_callback);
 
@@ -39,17 +47,18 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
-  // ..:: Initialization code :: ..
+  // ..:: Initialization code ::..
 
+  // Load my shaders
   Shader shader("../Glitter/Shaders/vertexShader.vert",
                 "../Glitter/Shaders/fragmentShader.frag");
 
   float vertices[] = {
-      // positions          // colors           // texture coords
-      0.5f,  0.5f,  0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, // top right
-      0.5f,  -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // bottom right
-      -0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, // bottom left
-      -0.5f, 0.5f,  0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f  // top left
+      // positions        // colors         // texture coords
+      0.5f,  0.5f,  0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // top right
+      0.5f,  -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,  // bottom right
+      -0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,  // bottom left
+      -0.5f, 0.5f,  0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f   // top left
   };
 
   unsigned int indices[] = {
@@ -68,37 +77,67 @@ int main(int argc, char *argv[]) {
   unsigned int EBO;
   glGenBuffers(1, &EBO);
 
-  // bind the Vertex Array Object first, then bind and set vertex buffer(s),
-  // and then configure vertex attributes(s).
+  // This stores the vertex config as you can basically put whatever info
+  // you like in here we need to store how we intepret it This is set up with
+  // glVertexAttribPointer below
   glBindVertexArray(VAO);
 
+  // In this we store the actual vertices
   glBindBuffer(GL_ARRAY_BUFFER, VBO);
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
+  // Here we store the indices for the vertices. This is to avoid duplicate
+  // storage of vertices as this stores which vertices to connect into triangles
+  // we only need each vertex stored once.
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
                GL_STATIC_DRAW);
 
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
-                        (void *)0); // position
+  // Sets how to intepret vertex data here we have index 1, thats size 3, its a
+  // float, we aren't normalizing it, and the size of the whole vertex is 8
+  // floats
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+  // We set this as location 1
   glEnableVertexAttribArray(0);
+
+  // this is the same only its index is now 1
   glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
-                        (void *)(3 * sizeof(float))); // color
+                        (void*)(3 * sizeof(float)));  // color
   glEnableVertexAttribArray(1);
+
+  // This is index 2 and only has size 2
   glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
-                        (void *)(6 * sizeof(float))); // texCoords
+                        (void*)(6 * sizeof(float)));  // texCoords
   glEnableVertexAttribArray(2);
 
-  glEnableVertexAttribArray(1);
+  glm::mat4 transform = glm::mat4(1.0f);
+  transform = glm::translate(transform, glm::vec3(0.2f, 0.2f, 0.0f));
+  transform =
+      glm::rotate(transform, glm::radians(90.0f), glm::vec3(0.0, 0.0, 1.0));
+  transform = glm::scale(transform, glm::vec3(1.2, 1.2, 1.2));
 
-  // ..:: Rendering Loop :: ..
+  glm::mat4 model = glm::mat4(1.0f);
+  model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+  // model = glm::rotate(model, time, glm::vec3(0.0f, 1.0f, 0.0f));
+
+  glm::mat4 view = glm::mat4(1.0f);
+  // note that we're translating the scene in the reverse direction of where
+  // we want to move
+
+  shader.use();
+  shader.setMat4("transform", transform);
+
+  // ..:: Rendering Loop ::..
   while (glfwWindowShouldClose(mWindow) == false) {
     processInput(mWindow);
 
     float time = glfwGetTime();
 
-    glm::mat4 model = glm::mat4(1.0f);
-    model = glm::rotate(model, time, glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::mat4 projection;
+    projection =
+        glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 100.0f);
+
+    view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
 
     float greenValue = (sin(time) / 2.0f) + 0.5f;
 
@@ -131,7 +170,7 @@ int main(int argc, char *argv[]) {
 // process all input: query GLFW whether relevant keys are pressed/released this
 // frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
-void processInput(GLFWwindow *window) {
+void processInput(GLFWwindow* window) {
   if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
     glfwSetWindowShouldClose(window, true);
 }
@@ -140,13 +179,13 @@ void processInput(GLFWwindow *window) {
 // function executes
 // ---------------------------------------------------------------------------------------------
 
-void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
+void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
   // make sure the viewport matches the new window dimensions; note that width
   // and height will be significantly larger than specified on retina displays.
   glViewport(0, 0, width, height);
 }
 
-unsigned int loadTexture(const std::string &path) {
+unsigned int loadTexture(const std::string& path) {
   unsigned int textureID;
 
   glGenTextures(1, &textureID);
@@ -162,8 +201,8 @@ unsigned int loadTexture(const std::string &path) {
 
   // Load image
   int width, height, nrChannels;
-  stbi_set_flip_vertically_on_load(true); // optional: flip vertically
-  unsigned char *data =
+  stbi_set_flip_vertically_on_load(true);  // optional: flip vertically
+  unsigned char* data =
       stbi_load(path.c_str(), &width, &height, &nrChannels, 0);
   if (data) {
     GLenum format = GL_RGB;

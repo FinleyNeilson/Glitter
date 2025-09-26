@@ -1,7 +1,7 @@
 #version 330 core
 layout(location = 0) out vec4 FragColor;
 
-// in vec3 ourColor;
+in vec3 ourVertexColor;
 in vec2 TexCoord;
 
 uniform sampler2D texture1;
@@ -15,5 +15,5 @@ void main()
   vec4 texColor = mix(texture(texture1, TexCoord), texture(texture2, TexCoord), 0.5);
 
   // Modulate it by ourColor (convert to vec4 with alpha 1.0)
-  FragColor = texColor * ourColor;
+  FragColor = texColor * ourColor * vec4(ourVertexColor, 1.0);
 }
