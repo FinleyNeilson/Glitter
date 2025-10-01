@@ -36,7 +36,7 @@ float fov = 45.0f;
 float deltaTime = 0.0f; // time between current frame and last frame
 float lastFrame = 0.0f;
 
-int main(int argc, char* argv[])
+int main(const int argc, char* argv[])
 {
     (void)argc, (void)argv;
 
@@ -57,6 +57,8 @@ int main(int argc, char* argv[])
         return EXIT_FAILURE;
     }
 
+    glfwSetWindowPos(window, 200, 200);
+
     // This connects GLAD to opengl
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
@@ -68,7 +70,7 @@ int main(int argc, char* argv[])
     // This breaks WSL for some reason
     // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+    if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress)))
     {
         fprintf(stderr, "Failed to initialize GLAD\n");
         return -1;
@@ -84,7 +86,7 @@ int main(int argc, char* argv[])
     Shader mainShader("../Glitter/Shaders/vertexShader.vert",
                       "../Glitter/Shaders/fragmentShader.frag");
 
-    float vertices[] = {
+    constexpr float vertices[] = {
         -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, 0.5f, -0.5f, -0.5f, 1.0f, 0.0f,
         0.5f, 0.5f, -0.5f, 1.0f, 1.0f, 0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
         -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, -0.5f, -0.5f, -0.5f, 0.0f, 0.0f,
@@ -110,11 +112,11 @@ int main(int argc, char* argv[])
         -0.5f, 0.5f, 0.5f, 0.0f, 0.0f, -0.5f, 0.5f, -0.5f, 0.0f, 1.0f
     };
 
-    unsigned int indices[] = {
+    const unsigned int indices[] = {
         0, 1, 2, 2, 3, 0,
     };
 
-    glm::vec3 cubePositions[] = {
+    const glm::vec3 cubePositions[] = {
         glm::vec3(2.0f, 3.0f, -10.0f), glm::vec3(2.0f, 5.0f, -15.0f),
         glm::vec3(-1.5f, -2.2f, -2.5f), glm::vec3(-3.8f, -2.0f, -12.3f),
         glm::vec3(2.4f, -0.4f, -3.5f), glm::vec3(-1.7f, 3.0f, -7.5f),
@@ -122,8 +124,8 @@ int main(int argc, char* argv[])
         glm::vec3(1.5f, 0.2f, -1.5f), glm::vec3(-1.3f, 1.0f, -1.5f)
     };
 
-    unsigned int texture1 = loadTexture("../Assets/Textures/container.jpg");
-    unsigned int texture2 = loadTexture("../Assets/Textures/awesomeface.png");
+    const unsigned int texture1 = loadTexture("../Assets/Textures/container.jpg");
+    const unsigned int texture2 = loadTexture("../Assets/Textures/awesomeface.png");
 
     unsigned int VBO;
     glGenBuffers(1, &VBO);
@@ -135,7 +137,7 @@ int main(int argc, char* argv[])
     glGenBuffers(1, &EBO);
 
     // This stores the vertex config, as you can basically put whatever data
-    // you like in the VBO, we need to store how we intepret it. This is set up
+    // you like in the VBO, we need to store how we interpret it. This is set up
     // with glVertexAttribPointer below
     glBindVertexArray(VAO);
 
@@ -150,27 +152,27 @@ int main(int argc, char* argv[])
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
                  GL_STATIC_DRAW);
 
-    // Sets how to intepret vertex data here we have index 1, thats size 3, its a
+    // Sets how to interpret vertex data here we have index 1, that's size 3, it's a
     // float, we aren't normalizing it, and the size of the whole vertex is 8
     // floats and its offset is 0
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), static_cast<void*>(nullptr));
     glEnableVertexAttribArray(0);
 
     // Here its index is 1 size 2 and offset is 3 floats
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
-                          (void*)(3 * sizeof(float))); // texCoords
+                          reinterpret_cast<void*>(3 * sizeof(float))); // texCoords
     glEnableVertexAttribArray(1);
 
     // Model * View * Projection
 
-    glm::mat4 model = glm::mat4(1.0f);
-    glm::mat4 view = glm::mat4(1.0f);
-    glm::mat4 projection = glm::mat4(1.0f);
+    auto model = glm::mat4(1.0f);
+    auto view = glm::mat4(1.0f);
 
     model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
     view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
-    projection = glm::perspective(
-        glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+
+    auto projection = glm::perspective(
+        glm::radians(45.0f), static_cast<float>(SCR_WIDTH) / static_cast<float>(SCR_HEIGHT), 0.1f, 100.0f);
 
     // Send info to the shaders
     mainShader.use();
@@ -187,8 +189,8 @@ int main(int argc, char* argv[])
         // Color and texture
 
         // Changing green color
-        float time = glfwGetTime();
-        float greenValue = (sin(time) / 2.0f) + 0.5f;
+        const float time = glfwGetTime();
+        const float greenValue = (sin(time) / 2.0f) + 0.5f;
 
         // Send the green color to the fragment shader.
         mainShader.use();
@@ -204,7 +206,7 @@ int main(int argc, char* argv[])
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // Camera
-        float currentFrame = glfwGetTime();
+        const float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
@@ -212,8 +214,8 @@ int main(int argc, char* argv[])
 
         // pass projection matrix to shader (note that in this case it could change
         // every frame)
-        glm::mat4 projection = glm::perspective(
-            glm::radians(fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+        projection = glm::perspective(
+            glm::radians(fov), static_cast<float>(SCR_WIDTH) / static_cast<float>(SCR_HEIGHT), 0.1f, 100.0f);
         mainShader.setMat4("projection", projection);
 
         view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
@@ -227,9 +229,9 @@ int main(int argc, char* argv[])
         glBindVertexArray(VAO);
         for (unsigned int i = 0; i < 10; i++)
         {
-            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::mat4(1.0f);
             model = glm::translate(model, cubePositions[i]);
-            float angle = 30.0f * i;
+            const float angle = 30.0f * i;
 
             model =
                 glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
@@ -264,7 +266,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
     lastX = xpos;
     lastY = ypos;
 
-    float sensitivity = 0.5f;
+    constexpr float sensitivity = 0.02f;
     xoffset *= sensitivity;
     yoffset *= sensitivity;
 
